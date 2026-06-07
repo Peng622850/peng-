@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>在线考试系统</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f5f6fa; color: #333; }
+    .hidden { display: none !important; }
+
+    /* 顶部导航 */
+    nav { background: #1a1a2e; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; height: 56px; }
+    nav .logo { color: #fff; font-size: 16px; font-weight: 600; }
+    nav .nav-links { display: flex; gap: 8px; }
+    nav button { background: transparent; border: 1px solid rgba(255,255,255,0.3); color: #fff; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; }
+    nav button:hover { background: rgba(255,255,255,0.1); }
+    nav button.active { background: #4f8ef7; border-color: #4f8ef7; }
+    .logout-btn { color: #ff6b6b !important; border-color: #ff6b6b !important; }
+
+    .container { max-width: 960px; margin: 0 auto; padding: 24px; }
+
+    /* 卡片 */
+    .card { background: #fff; border-radius: 12px; padding: 24px; margin-bottom: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+    .card h2 { font-size: 16px; font-weight: 600; margin-bottom: 16px; color: #1a1a2e; }
+
+    /* 表单 */
+    .form-group { margin-bottom: 14px; }
+    .form-group label { display: block; font-size: 13px; color: #666; margin-bottom: 5px; }
+    .form-group input, .form-group select, .form-group textarea {
+      width: 100%; padding: 9px 12px; border: 1px solid #dde1ea; border-radius: 7px;
+      font-size: 14px; outline: none; transition: border-color .2s;
+    }
+    .form-group input:focus, .form-group select:focus { border-color: #4f8ef7; }
+    .btn { padding: 9px 20px; border-radius: 7px; font-size: 14px; cursor: pointer; border: none; }
+    .btn-primary { background: #4f8ef7; color: #fff; }
+    .btn-primary:hover { background: #3a7de0; }
+    .btn-danger { background: #ff6b6b; color: #fff; }
+    .btn-success { background: #2ecc71; color: #fff; }
+    .btn-sm { padding: 5px 12px; font-size: 12px; }
+
+    /* 登录页 */
+    #loginPage { max-width: 400px; margin: 80px auto; }
+    .tab-btns { display: flex; margin-bottom: 20px; border-bottom: 1px solid #eee; }
+    .tab-btn { padding: 10px 20px; background: none; border: none; cursor: pointer; font-size: 14px; color: #888; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+    .tab-btn.active { color: #4f8ef7; border-bottom-color: #4f8ef7; }
+
+    /* 表格 */
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th { background: #f8f9fb; text-align: left; padding: 10px 12px; font-size: 13px; color: #666; border-bottom: 1px solid #eee; }
+    td { padding: 10px 12px; border-bottom: 1px solid #f0f0f0; }
+    tr:hover td { background: #fafbff; }
+
+    /* 消息提示 */
+    .msg { padding: 10px 14px; border-radius: 7px; font-size: 13px; margin-bottom: 14px; }
+    .msg-success { background: #eafaf1; color: #27ae60; }
+    .msg-error { background: #fdeded; color: #e74c3c; }
+
+    /* 考试页 */
+    .question-card { background: #f8f9fb; border-radius: 8px; padding: 16px; margin-bottom: 14px; }
+    .question-card .q-title { font-size: 14px; font-weight: 500; margin-bottom: 10px; }
+    .option-item { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 14px; cursor: pointer; }
+    .option-item input { cursor: pointer; }
+
+    /* 统计 */
+    .stat-card { background: #f8f9fb; border-radius: 8px; padding: 16px; text-align: center; }
+    .stat-num { font-size: 28px; font-weight: 700; color: #4f8ef7; }
+    .stat-label { font-size: 13px; color: #888; margin-top: 4px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 20px; }
+  </style>
+</head>
+<body>
+
+<!-- 导航栏 -->
+<nav id="navbar" class="hidden">
+  <div class="logo">📝 在线考试系统</div>
+  <div class="nav-links">
+    <button onclick="showPage('examPage')" id="nav-exam">考试</button>
+    <button onclick="showPage('questionPage')" id="nav-question">题库</button>
+    <button onclick="showPage('aiPage')" id="nav-ai">AI出题</button>
+    <button onclick="showPage('statsPage')" id="nav-stats">成绩</button>
+    <button class="logout-btn" onclick="logout()">退出</button>
+  </div>
+</nav>
+
+<!-- 登录/注册页 -->
+<div id="loginPage" class="container">
+  <div class="card">
+    <div style="text-align:center; margin-bottom:20px">
+      <div style="font-size:32px">📝</div>
+      <h1 style="font-size:20px; margin-top:8px">在线考试系统</h1>
+    </div>
+    <div class="tab-btns">
+      <button class="tab-btn active" onclick="switchTab('login')">登录</button>
+      <button class="tab-btn" onclick="switchTab('register')">注册</button>
+    </div>
+    <div id="loginForm">
+      <div id="loginMsg"></div>
+      <div class="form-group"><label>用户名</label><input id="loginUsername" placeholder="请输入用户名"></div>
+      <div class="form-group"><label>密码</label><input id="loginPassword" type="password" placeholder="请输入密码"></div>
+      <button class="btn btn-primary" style="width:100%" onclick="login()">登录</button>
+    </div>
+    <div id="registerForm" class="hidden">
+      <div id="registerMsg"></div>
+      <div class="form-group"><label>用户名</label><input id="regUsername" placeholder="请输入用户名"></div>
+      <div class="form-group"><label>邮箱</label><input id="regEmail" placeholder="请输入邮箱"></div>
+      <div class="form-group"><label>密码</label><input id="regPassword" type="password" placeholder="请输入密码"></div>
+      <div class="form-group">
+        <label>角色</label>
+        <select id="regRole">
+          <option value="student">考生</option>
+          <option value="admin">管理员</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" style="width:100%" onclick="register()">注册</button>
+    </div>
+  </div>
+</div>
+
+<!-- 考试页 -->
+<div id="examPage" class="container hidden">
+  <div class="card">
+    <h2>考试列表</h2>
+    <div id="examList">加载中...</div>
+  </div>
+  <!-- 答题区域 -->
+  <div id="examArea" class="card hidden">
+    <h2 id="examTitle">考试</h2>
+    <div id="examMsg"></div>
+    <div id="questionList"></div>
+    <button class="btn btn-primary" onclick="submitExam()">提交答案</button>
+  </div>
+  <!-- 创建考试 -->
+  <div class="card">
+    <h2>创建考试</h2>
+    <div class="form-group"><label>考试标题</label><input id="examTitle2" placeholder="请输入考试标题"></div>
+    <div class="form-group"><label>描述</label><input id="examDesc" placeholder="考试描述（可选）"></div>
+    <div class="form-group"><label>时长（分钟）</label><input id="examDuration" type="number" value="60"></div>
+    <div class="form-group"><label>总分</label><input id="examTotal" type="number" value="100"></div>
+    <div class="form-group"><label>题目ID列表（逗号分隔）</label><input id="examQids" placeholder="例：1,2,3"></div>
+    <div class="form-group"><label>各题分值（逗号分隔）</label><input id="examScores" placeholder="例：30,30,40"></div>
+    <button class="btn btn-primary" onclick="createExam()">创建考试</button>
+    <div id="createExamMsg" style="margin-top:10px"></div>
+  </div>
+</div>
+
+<!-- 题库页 -->
+<div id="questionPage" class="container hidden">
+  <div class="card">
+    <h2>题库</h2>
+    <div style="display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap">
+      <select id="filterType" onchange="loadQuestions()">
+        <option value="">全部题型</option>
+        <option value="single">单选题</option>
+        <option value="multiple">多选题</option>
+        <option value="judge">判断题</option>
+      </select>
+      <select id="filterDiff" onchange="loadQuestions()">
+        <option value="">全部难度</option>
+        <option value="1">难度1</option>
+        <option value="2">难度2</option>
+        <option value="3">难度3</option>
+        <option value="4">难度4</option>
+        <option value="5">难度5</option>
+      </select>
+    </div>
+    <div id="questionList2">加载中...</div>
+  </div>
+  <div class="card">
+    <h2>手动添加题目</h2>
+    <div class="form-group"><label>题目内容</label><textarea id="qContent" rows="3" placeholder="请输入题目内容"></textarea></div>
+    <div class="form-group">
+      <label>题型</label>
+      <select id="qType">
+        <option value="single">单选题</option>
+        <option value="multiple">多选题</option>
+        <option value="judge">判断题</option>
+      </select>
+    </div>
+    <div class="form-group"><label>选项（JSON格式，如 {"A":"选项A","B":"选项B"}）</label><input id="qOptions" placeholder='{"A":"选项A","B":"选项B","C":"选项C","D":"选项D"}'></div>
+    <div class="form-group"><label>答案</label><input id="qAnswer" placeholder="如：A 或 正确"></div>
+    <div class="form-group"><label>难度（1-5）</label><input id="qDiff" type="number" value="1" min="1" max="5"></div>
+    <div class="form-group"><label>分类</label><input id="qCategory" placeholder="如：Python基础"></div>
+    <button class="btn btn-primary" onclick="addQuestion()">添加题目</button>
+    <div id="addQMsg" style="margin-top:10px"></div>
+  </div>
+</div>
+
+<!-- AI出题页 -->
+<div id="aiPage" class="container hidden">
+  <div class="card">
+    <h2>🤖 AI 自动出题</h2>
+    <div class="form-group"><label>知识点</label><input id="aiTopic" placeholder="例：Python基础、数据结构、操作系统"></div>
+    <div class="form-group">
+      <label>题型</label>
+      <select id="aiType">
+        <option value="single_choice">单选题</option>
+        <option value="multiple_choice">多选题</option>
+        <option value="true_false">判断题</option>
+      </select>
+    </div>
+    <div class="form-group"><label>难度（1-5）</label><input id="aiDiff" type="number" value="3" min="1" max="5"></div>
+    <div class="form-group"><label>数量（最多5道）</label><input id="aiCount" type="number" value="2" min="1" max="5"></div>
+    <div class="form-group"><label>额外要求（可选）</label><input id="aiExtra" placeholder="例：侧重实际应用场景"></div>
+    <button class="btn btn-primary" onclick="generateAI()" id="aiBtn">生成题目</button>
+    <div id="aiMsg" style="margin-top:10px"></div>
+    <div id="aiResult" style="margin-top:16px"></div>
+  </div>
+</div>
+
+<!-- 成绩统计页 -->
+<div id="statsPage" class="container hidden">
+  <div class="grid-3">
+    <div class="stat-card"><div class="stat-num" id="statTotal">-</div><div class="stat-label">参加考试</div></div>
+    <div class="stat-card"><div class="stat-num" id="statAvg">-</div><div class="stat-label">平均得分</div></div>
+    <div class="stat-card"><div class="stat-num" id="statBest">-</div><div class="stat-label">最高分</div></div>
+  </div>
+  <div class="card">
+    <h2>我的成绩记录</h2>
+    <div id="recordList">加载中...</div>
+  </div>
+</div>
+
+<script>
+  let token = localStorage.getItem('token') || '';
+  let currentExamId = null;
+  let currentRecordId = null;
+
+  // 初始化
+  if (token) {
+    showApp();
+    showPage('examPage');
+  }
+
+  function showApp() {
+    document.getElementById('loginPage').classList.add('hidden');
+    document.getElementById('navbar').classList.remove('hidden');
+  }
+
+  function showPage(pageId) {
+    ['examPage','questionPage','aiPage','statsPage'].forEach(id => {
+      document.getElementById(id).classList.add('hidden');
+    });
+    document.getElementById(pageId).classList.remove('hidden');
+    ['nav-exam','nav-question','nav-ai','nav-stats'].forEach(id => {
+      document.getElementById(id).classList.remove('active');
+    });
+    const map = {examPage:'nav-exam', questionPage:'nav-question', aiPage:'nav-ai', statsPage:'nav-stats'};
+    document.getElementById(map[pageId]).classList.add('active');
+    if (pageId === 'examPage') loadExams();
+    if (pageId === 'questionPage') loadQuestions();
+    if (pageId === 'statsPage') loadStats();
+  }
+
+  function switchTab(tab) {
+    document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', (i===0&&tab==='login')||(i===1&&tab==='register')));
+    document.getElementById('loginForm').classList.toggle('hidden', tab !== 'login');
+    document.getElementById('registerForm').classList.toggle('hidden', tab !== 'register');
+  }
+
+  function showMsg(id, text, type='success') {
+    const el = document.getElementById(id);
+    el.className = `msg msg-${type}`;
+    el.textContent = text;
+    setTimeout(() => el.textContent = '', 3000);
+  }
+
+  async function request(url, method='GET', body=null) {
+    const headers = {'Content-Type': 'application/json'};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const res = await fetch(url, {method, headers, body: body ? JSON.stringify(body) : null});
+    return res.json();
+  }
+
+  // 登录
+  async function login() {
+    const username = document.getElementById('loginUsername').value.trim();
+    const password = document.getElementById('loginPassword').value.trim();
+    if (!username || !password) return showMsg('loginMsg', '请填写用户名和密码', 'error');
+    const data = await request('/user/login', 'POST', {username, password});
+    if (data.access_token) {
+      token = data.access_token;
+      localStorage.setItem('token', token);
+      showApp();
+      showPage('examPage');
+    } else {
+      showMsg('loginMsg', data.detail || '登录失败', 'error');
+    }
+  }
+
+  // 注册
+  async function register() {
+    const username = document.getElementById('regUsername').value.trim();
+    const email = document.getElementById('regEmail').value.trim();
+    const password = document.getElementById('regPassword').value.trim();
+    const role = document.getElementById('regRole').value;
+    if (!username || !email || !password) return showMsg('registerMsg', '请填写完整信息', 'error');
+    const data = await request('/user/register', 'POST', {username, email, password, role});
+    if (data.id) {
+      showMsg('registerMsg', '注册成功，请登录', 'success');
+      switchTab('login');
+    } else {
+      showMsg('registerMsg', data.detail || '注册失败', 'error');
+    }
+  }
+
+  function logout() {
+    token = '';
+    localStorage.removeItem('token');
+    location.reload();
+  }
+
+  // 加载考试列表
+  async function loadExams() {
+    const data = await request('/exam/');
+    const el = document.getElementById('examList');
+    if (!data.length) { el.innerHTML = '<p style="color:#aaa;font-size:14px">暂无考试</p>'; return; }
+    el.innerHTML = `<table>
+      <tr><th>ID</th><th>考试名称</th><th>时长</th><th>总分</th><th>操作</th></tr>
+      ${data.map(e => `<tr>
+        <td>${e.id}</td><td>${e.title}</td><td>${e.duration}分钟</td><td>${e.total_score}分</td>
+        <td><button class="btn btn-primary btn-sm" onclick="startExam(${e.id},'${e.title}')">开始考试</button></td>
+      </tr>`).join('')}
+    </table>`;
+  }
+
+  // 开始考试
+  async function startExam(examId, title) {
+    currentExamId = examId;
+    const data = await request(`/exam/${examId}/start`, 'POST');
+    if (data.record_id) {
+      currentRecordId = data.record_id;
+      document.getElementById('examTitle').textContent = data.exam_title;
+      const qEl = document.getElementById('questionList');
+      qEl.innerHTML = data.questions.map((q, i) => `
+        <div class="question-card">
+          <div class="q-title">${i+1}. 【${q.type}】${q.content}（${q.score}分）</div>
+          ${q.options ? Object.entries(q.options).map(([k,v]) => `
+            <label class="option-item">
+              <input type="radio" name="q_${q.question_id}" value="${k}"> ${k}. ${v}
+            </label>`).join('') : `<input type="text" id="ans_${q.question_id}" placeholder="请输入答案" style="width:100%;padding:8px;border:1px solid #dde1ea;border-radius:6px">`}
+        </div>`).join('');
+      document.getElementById('examArea').classList.remove('hidden');
+      document.getElementById('examArea').scrollIntoView({behavior:'smooth'});
+    }
+  }
+
+  // 提交答案
+  async function submitExam() {
+    const answers = {};
+    document.querySelectorAll('[name^="q_"]:checked').forEach(el => {
+      const qid = el.name.replace('q_', '');
+      answers[qid] = el.value;
+    });
+    document.querySelectorAll('[id^="ans_"]').forEach(el => {
+      if (el.value) answers[el.id.replace('ans_','')] = el.value;
+    });
+    const data = await request('/exam/submit', 'POST', {exam_id: currentExamId, answers});
+    if (data.total_score !== undefined) {
+      showMsg('examMsg', `提交成功！得分：${data.total_score} / ${data.full_score}`, 'success');
+      document.getElementById('examArea').classList.add('hidden');
+    } else {
+      showMsg('examMsg', data.detail || '提交失败', 'error');
+    }
+  }
+
+  // 创建考试
+  async function createExam() {
+    const title = document.getElementById('examTitle2').value.trim();
+    const duration = parseInt(document.getElementById('examDuration').value);
+    const total_score = parseInt(document.getElementById('examTotal').value);
+    const qids = document.getElementById('examQids').value.split(',').map(Number);
+    const scores = document.getElementById('examScores').value.split(',').map(Number);
+    const data = await request('/exam/', 'POST', {
+      title, description: document.getElementById('examDesc').value,
+      duration, total_score, question_ids: qids, scores
+    });
+    if (data.id) {
+      showMsg('createExamMsg', `考试创建成功，ID：${data.id}`, 'success');
+      loadExams();
+    } else {
+      showMsg('createExamMsg', data.detail || '创建失败', 'error');
+    }
+  }
+
+  // 加载题库
+  async function loadQuestions() {
+    const type = document.getElementById('filterType').value;
+    const diff = document.getElementById('filterDiff').value;
+    let url = '/question/?';
+    if (type) url += `type=${type}&`;
+    if (diff) url += `difficulty=${diff}&`;
+    const data = await request(url);
+    const el = document.getElementById('questionList2');
+    if (!data.length) { el.innerHTML = '<p style="color:#aaa;font-size:14px">暂无题目</p>'; return; }
+    el.innerHTML = `<table>
+      <tr><th>ID</th><th>题型</th><th>难度</th><th>分类</th><th>题目</th></tr>
+      ${data.map(q => `<tr>
+        <td>${q.id}</td>
+        <td>${{single:'单选',multiple:'多选',judge:'判断'}[q.type]||q.type}</td>
+        <td>${q.difficulty}</td>
+        <td>${q.category||'-'}</td>
+        <td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${q.content}</td>
+      </tr>`).join('')}
+    </table>`;
+  }
+
+  // 添加题目
+  async function addQuestion() {
+    const content = document.getElementById('qContent').value.trim();
+    const type = document.getElementById('qType').value;
+    const answer = document.getElementById('qAnswer').value.trim();
+    if (!content || !answer) return showMsg('addQMsg', '请填写题目内容和答案', 'error');
+    let options = null;
+    const optStr = document.getElementById('qOptions').value.trim();
+    if (optStr) { try { options = JSON.parse(optStr); } catch(e) { return showMsg('addQMsg', '选项格式不正确', 'error'); } }
+    const data = await request('/question/', 'POST', {
+      content, type, options, answer,
+      difficulty: parseInt(document.getElementById('qDiff').value),
+      category: document.getElementById('qCategory').value
+    });
+    if (data.id) { showMsg('addQMsg', `题目添加成功，ID：${data.id}`, 'success'); loadQuestions(); }
+    else showMsg('addQMsg', data.detail || '添加失败', 'error');
+  }
+
+  // AI出题
+  async function generateAI() {
+    const topic = document.getElementById('aiTopic').value.trim();
+    if (!topic) return showMsg('aiMsg', '请输入知识点', 'error');
+    document.getElementById('aiBtn').textContent = '生成中...';
+    document.getElementById('aiBtn').disabled = true;
+    const data = await request('/ai/generate', 'POST', {
+      topic, question_type: document.getElementById('aiType').value,
+      difficulty: parseInt(document.getElementById('aiDiff').value),
+      count: parseInt(document.getElementById('aiCount').value),
+      extra_requirements: document.getElementById('aiExtra').value
+    });
+    document.getElementById('aiBtn').textContent = '生成题目';
+    document.getElementById('aiBtn').disabled = false;
+    if (data.questions) {
+      showMsg('aiMsg', `成功生成 ${data.questions.length} 道题目并存入题库`, 'success');
+      document.getElementById('aiResult').innerHTML = data.questions.map(q => `
+        <div class="question-card">
+          <div class="q-title">${q.content}</div>
+          ${q.options ? Object.entries(q.options).map(([k,v])=>`<div style="font-size:13px;color:#666;margin-bottom:3px">${k}. ${v}</div>`).join('') : ''}
+          <div style="font-size:13px;color:#27ae60;margin-top:6px">✓ 答案：${q.answer}</div>
+          ${q.analysis ? `<div style="font-size:13px;color:#888;margin-top:4px">解析：${q.analysis}</div>` : ''}
+        </div>`).join('');
+    } else {
+      showMsg('aiMsg', data.detail || '生成失败', 'error');
+    }
+  }
+
+  // 加载成绩
+  async function loadStats() {
+    const data = await request('/stats/my-records');
+    if (data.length) {
+      document.getElementById('statTotal').textContent = data.length;
+      const scores = data.map(r => r.total_score);
+      document.getElementById('statAvg').textContent = Math.round(scores.reduce((a,b)=>a+b,0)/scores.length);
+      document.getElementById('statBest').textContent = Math.max(...scores);
+    }
+    const el = document.getElementById('recordList');
+    if (!data.length) { el.innerHTML = '<p style="color:#aaa;font-size:14px">暂无成绩记录</p>'; return; }
+    el.innerHTML = `<table>
+      <tr><th>考试名称</th><th>得分</th><th>满分</th><th>提交时间</th></tr>
+      ${data.map(r => `<tr>
+        <td>${r.exam_title}</td>
+        <td style="color:${r.total_score/r.full_score>=0.6?'#27ae60':'#e74c3c'};font-weight:600">${r.total_score}</td>
+        <td>${r.full_score}</td>
+        <td>${r.submit_time ? new Date(r.submit_time).toLocaleString() : '-'}</td>
+      </tr>`).join('')}
+    </table>`;
+  }
+</script>
+</body>
+</html>

@@ -6,9 +6,16 @@ from app.routers.question import router as question_router
 from app.routers.exam import router as exam_router
 from app.routers.stats import router as stats_router
 from app.routers.ai_question import router as ai_question_router
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
 # 创建 FastAPI 应用实例
 app = FastAPI(title="在线考试系统", version="1.0.0")
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+@app.get("/frontend")
+def frontend():
+    return FileResponse("static/index.html")
 
 # 启动时自动创建所有数据库表
 Base.metadata.create_all(bind=engine)
