@@ -9,14 +9,15 @@ from app.models import User
 
 router = APIRouter()
 
-# 创建考试接口
-@router.post("/", response_model=ExamResponse)
-def create_exam(exam_data: ExamCreate, db: Session = Depends(get_db)):
-    # 验证题目数量和分值数量是否一致
+@app.post("/", response_model=ExamResponse)
+def create_exam(
+    exam_data: ExamCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     if len(exam_data.question_ids) != len(exam_data.scores):
         raise HTTPException(status_code=400, detail="题目数量和分值数量不一致")
 
-    # 创建考试
     new_exam = Exam(
         title=exam_data.title,
         description=exam_data.description,
@@ -24,13 +25,12 @@ def create_exam(exam_data: ExamCreate, db: Session = Depends(get_db)):
         total_score=exam_data.total_score,
         start_time=exam_data.start_time,
         end_time=exam_data.end_time,
-        created_by=1  # 暂时写死
+        created_by=current_user.id
     )
     db.add(new_exam)
     db.commit()
     db.refresh(new_exam)
 
-    # 关联题目和分值
     for question_id, score in zip(exam_data.question_ids, exam_data.scores):
         exam_question = ExamQuestion(
             exam_id=new_exam.id,
@@ -39,15 +39,12 @@ def create_exam(exam_data: ExamCreate, db: Session = Depends(get_db)):
         )
         db.add(exam_question)
     db.commit()
-
     return new_exam
 
-# 获取考试列表
 @router.get("/", response_model=List[ExamResponse])
 def get_exams(db: Session = Depends(get_db)):
     return db.query(Exam).all()
 
-# 获取单个考试详情
 @router.get("/{exam_id}", response_model=ExamResponse)
 def get_exam(exam_id: int, db: Session = Depends(get_db)):
     exam = db.query(Exam).filter(Exam.id == exam_id).first()
@@ -55,24 +52,25 @@ def get_exam(exam_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="考试不存在")
     return exam
 
-# 学生开始考试
 @router.post("/{exam_id}/start")
-def start_exam(exam_id: int, db: Session = Depends(get_db)):
+def start_exam(
+    exam_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     exam = db.query(Exam).filter(Exam.id == exam_id).first()
     if not exam:
         raise HTTPException(status_code=404, detail="考试不存在")
 
-    # 创建考试记录
     record = ExamRecord(
         exam_id=exam_id,
-        user_id=1,  # 暂时写死
+        user_id=current_user.id,
         status="ongoing"
     )
     db.add(record)
     db.commit()
     db.refresh(record)
 
-    # 获取考试题目
     exam_questions = db.query(ExamQuestion).filter(
         ExamQuestion.exam_id == exam_id
     ).all()
@@ -95,24 +93,23 @@ def start_exam(exam_id: int, db: Session = Depends(get_db)):
         "questions": questions
     }
 
-# 学生提交答案
 @router.post("/submit")
-def submit_exam(submit_data: SubmitAnswer, db: Session = Depends(get_db)):
-    # 查找考试记录
+def submit_exam(
+    submit_data: SubmitAnswer,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     record = db.query(ExamRecord).filter(
         ExamRecord.exam_id == submit_data.exam_id,
-        ExamRecord.user_id == 1,  # 暂时写死
+        ExamRecord.user_id == current_user.id,
         ExamRecord.status == "ongoing"
     ).first()
     if not record:
         raise HTTPException(status_code=404, detail="考试记录不存在")
 
     total_score = 0
-
-    # 逐题判分
     for question_id_str, user_answer in submit_data.answers.items():
         question_id = int(question_id_str)
-
         question = db.query(Question).filter(Question.id == question_id).first()
         exam_question = db.query(ExamQuestion).filter(
             ExamQuestion.exam_id == submit_data.exam_id,
@@ -132,7 +129,6 @@ def submit_exam(submit_data: SubmitAnswer, db: Session = Depends(get_db)):
         )
         db.add(detail)
 
-    # 更新考试记录
     from datetime import datetime
     record.submit_time = datetime.utcnow()
     record.total_score = total_score
